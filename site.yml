@@ -1,0 +1,55 @@
+---
+# ============================================================
+# site.yml
+# Главный playbook проекта.
+# ============================================================
+
+- name: Prepare Ubuntu host for LLM workloads
+  hosts: llm_nodes
+  become: true
+  gather_facts: true
+
+  roles:
+    - role: ubuntu_base_nvidia_host
+      tags:
+        - ubuntu_base_nvidia_host
+        - base
+        - nvidia_host
+
+    - role: docker_engine
+      tags:
+        - docker_engine
+        - docker
+
+    - role: nvidia_container_toolkit
+      tags:
+        - nvidia_container_toolkit
+        - nvidia_docker
+        - gpu_containers
+
+    - role: ollama_container
+      tags:
+        - ollama_container
+        - ollama
+
+    - role: ollama_pull_models
+      tags:
+        - ollama_pull_models
+        - ollama_models
+        - pull_models
+
+    - role: monitoring_stack
+      tags:
+        - monitoring_stack
+        - monitoring
+
+    - role: garak_runner
+      tags:
+        - garak_runner
+        - garak
+
+    - role: platform_users
+      tags:
+        - platform_users
+        - users
+        - access

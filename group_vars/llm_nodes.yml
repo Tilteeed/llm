@@ -1,0 +1,440 @@
+---
+# ============================================================
+# group_vars/llm_nodes.yml
+# Общие переменные для хостов группы llm_nodes.
+# Пока здесь лежат только переменные первой роли.
+# В будущем сюда можно добавлять docker, ollama, monitoring и т.д.
+# ============================================================
+
+# ------------------------------------------------------------
+# Блок первой роли: ubuntu_base_nvidia_host
+# ------------------------------------------------------------
+
+# Флаг, разрешающий делать dist-upgrade/full-upgrade.
+# По умолчанию выключен, потому что upgrade может неожиданно
+# обновить ядро, драйверы, system packages и сломать уже
+# работающую систему или потребовать незапланированную перезагрузку.
+ubuntu_base_do_dist_upgrade: false
+
+# Список базовых пакетов, которые мы хотим видеть на Ubuntu-хосте.
+# Здесь есть:
+# - базовые утилиты,
+# - python3,
+# - pip,
+# - venv,
+# - инструменты, полезные для диагностики GPU и системы.
+ubuntu_base_packages:
+  - ca-certificates
+  - curl
+  - wget
+  - git
+  - gnupg
+  - lsb-release
+  - software-properties-common
+  - build-essential
+  - htop
+  - nvtop
+  - pciutils
+  - apt-transport-https
+  - python3
+  - python3-pip
+  - python3-venv
+  - python3-apt
+  - ubuntu-drivers-common
+
+ubuntu_nvidia_smi_command: /usr/lib/wsl/lib/nvidia-smi
+# Для обычной VM потом сможешь поменять на: ubuntu_nvidia_smi_command: nvidia-smi
+# Способ установки NVIDIA-драйвера на хост.
+# Пока делаем самый простой и понятный вариант:
+# auto -> ubuntu-drivers autoinstall
+#
+# Позже можно расширить:
+# nvidia_driver_install_method: package
+# nvidia_driver_package_name: nvidia-driver-XXX
+ubuntu_nvidia_driver_install_method: auto
+# Управлять ли установкой host NVIDIA driver внутри Ubuntu.
+# true  -> обычная Ubuntu VM, ставим драйвер через роль
+# false -> WSL2, драйвер внутри Ubuntu не ставим, потому что GPU
+#          уже пробрасывается со стороны Windows/WSL
+ubuntu_nvidia_manage_host_driver: false
+# Если когда-то понадобится форсировать переустановку драйвера,
+# можно временно включить этот флаг.
+ubuntu_nvidia_force_reinstall: false
+
+# Таймаут ожидания после reboot.
+# Если машина медленная, можно увеличить.
+ubuntu_nvidia_reboot_timeout: 1800
+
+# Дополнительная задержка после reboot.
+# Иногда после возврата SSH драйвер и сервисы еще "доподнимаются".
+ubuntu_nvidia_post_reboot_delay: 20
+
+
+# ------------------------------------------------------------
+# Блок второй роли: docker_engine
+# ------------------------------------------------------------
+
+# Список старых/конфликтующих пакетов, которые желательно удалить
+# перед установкой Docker из официального репозитория.
+docker_engine_legacy_packages:
+  - docker.io
+  - docker-doc
+  - docker-compose
+  - docker-compose-v2
+  - podman-docker
+  - containerd
+  - runc
+
+# Пакеты, которые нужны для установки Docker из официального репозитория.
+docker_engine_prerequisite_packages:
+  - ca-certificates
+  - curl
+  - gnupg
+
+# Пакеты Docker из официального репозитория Docker.
+docker_engine_packages:
+  - docker-ce
+  - docker-ce-cli
+  - containerd.io
+  - docker-buildx-plugin
+  - docker-compose-plugin
+
+# Имя группы Docker.
+docker_engine_group_name: docker
+
+# Пользователи, которых нужно добавить в группу docker.
+# Пока ты просил полные права для пользователей, и позже мы
+# используем этот же список в отдельной роли создания пользователей.
+#
+# На данном этапе роль просто попытается добавить существующих
+# пользователей в группу docker.
+# Если пользователя еще нет, мы не будем падать с ошибкой.
+docker_engine_group_members:
+  - ubuntu
+  - Alex
+  - IvanO
+  - IvanM
+  - ilya
+  - Dima
+
+# Нужно ли удалять старые пакеты Docker перед установкой.
+docker_engine_remove_legacy_packages: true
+
+# Нужно ли запускать простую smoke-check команду hello-world.
+# По умолчанию true, но если среда очень ограниченная, можно выключить.
+docker_engine_run_hello_world_test: true
+
+
+# ------------------------------------------------------------
+# Блок третьей роли: nvidia_container_toolkit
+# ------------------------------------------------------------
+
+# Пакеты, необходимые для подключения репозитория NVIDIA toolkit.
+nvidia_container_toolkit_prerequisite_packages:
+  - ca-certificates
+  - curl
+  - gnupg
+
+# Основной пакет NVIDIA Container Toolkit.
+nvidia_container_toolkit_packages:
+  - nvidia-container-toolkit
+
+# Путь, где будет храниться GPG keyring для NVIDIA toolkit.
+nvidia_container_toolkit_keyring_path: /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg
+
+# URL списка репозитория NVIDIA Container Toolkit.
+nvidia_container_toolkit_repo_list_url: https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list
+
+# Включать ли тест GPU внутри контейнера после настройки.
+nvidia_container_toolkit_run_gpu_test: true
+
+# Образ для теста GPU внутри контейнера.
+# Это просто тестовый CUDA image, который запускает nvidia-smi.
+#nvidia_container_toolkit_test_image: nvidia/cuda:12.4.1-base-ubuntu24.04 padaet v oshipky probyite 22.04 or 20.04
+nvidia_container_toolkit_test_image: nvidia/cuda:12.4.1-base-ubuntu22.04
+
+# ------------------------------------------------------------
+# Блок четвертой роли: ollama_container
+# ------------------------------------------------------------
+
+# Имя контейнера Ollama.
+ollama_container_name: ollama
+
+# Имя Docker image для Ollama.
+ollama_container_image: ollama/ollama:latest
+
+# Docker network, в которой будет жить Ollama.
+# Это удобно, потому что позже сюда можно подключить
+# Open WebUI, Garak, reverse proxy и другие сервисы.
+ollama_container_network_name: llm_stack_net
+
+# Базовый каталог на хосте, где будут лежать compose-файлы,
+# данные и прочая инфраструктурная обвязка Ollama.
+ollama_container_base_dir: /opt/llm/ollama
+
+# Каталог для compose-файла.
+ollama_container_compose_dir: "{{ ollama_container_base_dir }}/compose"
+
+# Каталог для данных Ollama на хосте.
+# Здесь будут храниться модели и служебные данные.
+ollama_container_data_dir: "{{ ollama_container_base_dir }}/data"
+
+# Имя compose-файла.
+ollama_container_compose_file: "{{ ollama_container_compose_dir }}/compose.yml"
+
+# Публикуемый порт Ollama API на хосте.
+ollama_container_host_port: 11434
+
+# Внутренний порт контейнера Ollama.
+ollama_container_internal_port: 11434
+
+# Привязка к IP на хосте.
+# 0.0.0.0 = слушать на всех интерфейсах.
+# Если захочешь ограничить доступ только локально или по внутреннему IP,
+# потом можно будет поменять на 127.0.0.1 или приватный адрес.
+ollama_container_bind_address: 0.0.0.0
+
+# Перезапуск контейнера при сбоях и после reboot хоста.
+ollama_container_restart_policy: unless-stopped
+
+# Нужен ли GPU для Ollama-контейнера.
+# Для твоего сценария по умолчанию true.
+ollama_container_use_gpu: true
+
+# Нужно ли явно добавлять переменную окружения OLLAMA_HOST.
+# Это полезно, чтобы сервис внутри контейнера слушал 0.0.0.0.
+ollama_container_listen_address: "0.0.0.0:11434"
+
+# Нужно ли создавать docker network.
+ollama_container_create_network: true
+
+# Таймаут ожидания готовности API Ollama после запуска контейнера.
+ollama_container_healthcheck_retries: 30
+ollama_container_healthcheck_delay: 10
+
+# ------------------------------------------------------------
+# Блок пятой роли: ollama_pull_models
+# ------------------------------------------------------------
+
+# Имя контейнера Ollama, внутри которого будет выполняться
+# команда ollama pull.
+ollama_pull_models_container_name: "{{ ollama_container_name }}"
+
+# Список моделей, которые нужно подтянуть.
+# Ты потом сможешь менять его под свои задачи.
+ollama_pull_models_list:
+  - qwen2.5:7b
+  - llama3.1:8b
+
+# Форсировать повторный pull даже если модель уже есть.
+# По умолчанию false, чтобы не тратить трафик и время зря.
+ollama_pull_models_force: false
+
+# Делать ли финальную повторную проверку списка моделей после pull.
+ollama_pull_models_show_final_list: true
+
+# Таймаут ожидания доступности API Ollama перед началом pull.
+ollama_pull_models_api_retries: 20
+ollama_pull_models_api_delay: 10
+
+# ------------------------------------------------------------
+# Блок шестой роли: monitoring_stack
+# ------------------------------------------------------------
+
+# Базовый каталог мониторинга на хосте.
+monitoring_stack_base_dir: /opt/llm/monitoring
+
+# Каталог для compose-файла и конфигов.
+monitoring_stack_compose_dir: "{{ monitoring_stack_base_dir }}/compose"
+
+# Каталог данных Prometheus.
+monitoring_stack_prometheus_data_dir: "{{ monitoring_stack_base_dir }}/prometheus-data"
+#Otkly4enie cAdvisor
+monitoring_stack_enable_cadvisor: false
+# Каталог данных Grafana.
+monitoring_stack_grafana_data_dir: "{{ monitoring_stack_base_dir }}/grafana-data"
+# Grafana provisioning
+monitoring_stack_enable_grafana_provisioning: true
+
+monitoring_stack_grafana_provisioning_dir: "{{ monitoring_stack_base_dir }}/grafana-provisioning"
+monitoring_stack_grafana_datasources_dir: "{{ monitoring_stack_grafana_provisioning_dir }}/datasources"
+monitoring_stack_grafana_dashboards_dir: "{{ monitoring_stack_grafana_provisioning_dir }}/dashboards"
+
+monitoring_stack_grafana_datasource_file: "{{ monitoring_stack_grafana_datasources_dir }}/prometheus.yml"
+monitoring_stack_grafana_dashboard_provider_file: "{{ monitoring_stack_grafana_dashboards_dir }}/dashboard-provider.yml"
+monitoring_stack_grafana_dashboard_json_dir: "{{ monitoring_stack_grafana_dashboards_dir }}/json"
+
+monitoring_stack_grafana_datasource_name: Prometheus
+monitoring_stack_grafana_datasource_url: http://prometheus:9090
+
+monitoring_stack_grafana_default_dashboards:
+  - node-exporter-full.json
+  #- docker-cadvisor.json
+# Конфигурационный файл Prometheus.
+monitoring_stack_prometheus_config_file: "{{ monitoring_stack_compose_dir }}/prometheus.yml"
+
+# Compose-файл стека мониторинга.
+monitoring_stack_compose_file: "{{ monitoring_stack_compose_dir }}/compose.yml"
+
+# Имя внешней Docker-сети.
+# По умолчанию используем ту же сеть, что и для Ollama,
+# чтобы сервисы могли видеть друг друга по именам контейнеров.
+monitoring_stack_network_name: "{{ ollama_container_network_name }}"
+
+# Нужно ли создавать сеть, если ее нет.
+monitoring_stack_create_network: true
+
+# Образы сервисов.
+monitoring_stack_prometheus_image: prom/prometheus:latest
+monitoring_stack_grafana_image: grafana/grafana:latest
+monitoring_stack_node_exporter_image: prom/node-exporter:latest
+monitoring_stack_cadvisor_image: gcr.io/cadvisor/cadvisor:latest
+#For WSL2 or VM with GPU
+monitoring_stack_node_exporter_rootfs_mount: "/:/host:ro" #DLYA VM S GPU monitoring_stack_node_exporter_rootfs_mount: "/:/host:ro,rslave"
+# Имена контейнеров.
+monitoring_stack_prometheus_container_name: prometheus
+monitoring_stack_grafana_container_name: grafana
+monitoring_stack_node_exporter_container_name: node-exporter
+monitoring_stack_cadvisor_container_name: cadvisor
+
+# Порты публикации на хосте.
+monitoring_stack_prometheus_host_port: 9090
+monitoring_stack_grafana_host_port: 3000
+monitoring_stack_node_exporter_host_port: 9100
+monitoring_stack_cadvisor_host_port: 8081
+
+# На каких интерфейсах публиковать порты.
+# Для первого старта оставляем 0.0.0.0.
+# Позже можно ограничить до 127.0.0.1 или приватного IP.
+monitoring_stack_bind_address: 0.0.0.0
+
+# Политика рестарта контейнеров.
+monitoring_stack_restart_policy: unless-stopped
+
+# Базовый логин и пароль Grafana.
+# Позже лучше вынести пароль в vault.
+monitoring_stack_grafana_admin_user: admin
+monitoring_stack_grafana_admin_password: admin123
+
+# Таймауты проверки доступности Grafana и Prometheus.
+monitoring_stack_healthcheck_retries: 30
+monitoring_stack_healthcheck_delay: 10
+
+# ------------------------------------------------------------
+# Блок седьмой роли: garak_runner
+# ------------------------------------------------------------
+
+# Базовый каталог Garak на хосте.
+garak_runner_base_dir: /opt/llm/garak
+
+# Каталог для virtual environment.
+garak_runner_venv_dir: "{{ garak_runner_base_dir }}/venv"
+
+# Каталог для результатов запусков Garak.
+garak_runner_reports_dir: "{{ garak_runner_base_dir }}/reports"
+
+# Каталог для вспомогательных скриптов.
+garak_runner_bin_dir: "{{ garak_runner_base_dir }}/bin"
+
+# Пользователь и группа владельца файлов Garak.
+# Пока оставляем root, чтобы не усложнять до роли platform_users.
+garak_runner_owner: root
+garak_runner_group: root
+
+# Имя пакета для установки через pip.
+# Можно оставить просто garak.
+garak_runner_pip_package: garak
+
+# Нужно ли обновлять pip/setuptools/wheel внутри venv.
+garak_runner_upgrade_pip_stack: true
+
+# Нужно ли ставить Garak последней доступной версией.
+# Если позже захочешь закрепить версию, можно будет задать
+# например: garak==0.x.y
+garak_runner_package_spec: "{{ garak_runner_pip_package }}"
+
+# Адрес Ollama API, против которого потом будет запускаться Garak.
+# Пока берем локальный endpoint на этой же машине.
+garak_runner_ollama_base_url: "http://127.0.0.1:{{ ollama_container_host_port }}"
+
+# Модель по умолчанию для helper-скрипта Garak.
+# Потом можно поменять на любую из уже загруженных.
+garak_runner_default_model: "qwen2.5:7b"
+
+# Нужно ли создавать helper-скрипт запуска Garak против Ollama.
+garak_runner_create_helper_script: true
+
+# Путь к helper-скрипту.
+garak_runner_helper_script_path: "{{ garak_runner_bin_dir }}/run_garak_ollama.sh"
+# ------------------------------------------------------------
+# Блок восьмой роли: platform_users
+# ------------------------------------------------------------
+
+# Список платформенных пользователей.
+# Пароли храним не в открытом виде, а в виде password_hash.
+#
+# ВАЖНО:
+# Ниже приведены ПРИМЕРЫ.
+# Ты должен сгенерировать свои реальные хеши и заменить их.
+platform_users_list:
+  - name: Alex
+    comment: "LLM platform administrator Alex"
+    shell: /bin/bash
+    password_hash: "$6$Hw/ZThOPQiWajABW$lAvzUS5ZaAkNIPNmoSaWUBYc7IltZSOrwx0PCmEjJNMZ6x3pyDX7LfHVx2K5494MvDbWcrgYuXEdjIBLDM6qA."
+
+  - name: IvanO
+    comment: "LLM platform administrator IvanO"
+    shell: /bin/bash
+    password_hash: "$6$Hw/ZThOPQiWajABW$lAvzUS5ZaAkNIPNmoSaWUBYc7IltZSOrwx0PCmEjJNMZ6x3pyDX7LfHVx2K5494MvDbWcrgYuXEdjIBLDM6qA."
+
+  - name: IvanM
+    comment: "LLM platform administrator IvanM"
+    shell: /bin/bash
+    password_hash: "$6$Hw/ZThOPQiWajABW$lAvzUS5ZaAkNIPNmoSaWUBYc7IltZSOrwx0PCmEjJNMZ6x3pyDX7LfHVx2K5494MvDbWcrgYuXEdjIBLDM6qA."
+
+  - name: ilya
+    comment: "LLM platform administrator ilya"
+    shell: /bin/bash
+    password_hash: "$6$Hw/ZThOPQiWajABW$lAvzUS5ZaAkNIPNmoSaWUBYc7IltZSOrwx0PCmEjJNMZ6x3pyDX7LfHVx2K5494MvDbWcrgYuXEdjIBLDM6qA."
+
+  - name: Dima
+    comment: "LLM platform administrator Dima"
+    shell: /bin/bash
+    password_hash: "$6$Hw/ZThOPQiWajABW$lAvzUS5ZaAkNIPNmoSaWUBYc7IltZSOrwx0PCmEjJNMZ6x3pyDX7LfHVx2K5494MvDbWcrgYuXEdjIBLDM6qA."
+
+# Нужно ли создавать пользователям домашние каталоги.
+platform_users_create_home: true
+
+# Нужно ли обновлять пароль при каждом запуске роли.
+# on_create = задать пароль только при создании пользователя
+# always    = обновлять пароль на каждом прогоне
+#
+# Для старта безопаснее on_create.
+platform_users_update_password: on_create
+
+# Основные дополнительные группы.
+# sudo - права администратора
+# docker - доступ к Docker без sudo
+platform_users_default_groups:
+  - sudo
+  - docker
+
+# Нужно ли создавать общий системный group для платформенных пользователей.
+platform_users_create_shared_group: true
+platform_users_shared_group_name: llm-admins
+
+# Нужно ли добавлять пользователей в общий group.
+platform_users_add_shared_group: true
+
+# Нужно ли настраивать общий каталог для платформенной команды.
+platform_users_create_shared_directory: true
+platform_users_shared_directory_path: /opt/llm/shared
+
+# Права на общий каталог.
+platform_users_shared_directory_owner: root
+platform_users_shared_directory_group: "{{ platform_users_shared_group_name }}"
+platform_users_shared_directory_mode: "2775"
+
+# Нужно ли разрешить sudo через membership в группе sudo.
+# На Ubuntu это стандартный сценарий.
+platform_users_manage_sudo_group: true
