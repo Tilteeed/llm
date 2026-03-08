@@ -562,7 +562,35 @@ monitoring_stack_grafana_admin_password
 /opt/llm/garak/bin/run_garak_ollama.sh
 ```
 ---
+## Какой Python использует Garak
 
+Роль `garak_runner` может использовать:
+
+- либо системный `python3`
+- либо отдельный Python 3.11, установленный ролью `python_runtime`
+
+Это поведение управляется переменными:
+
+```yaml
+garak_runner_use_custom_python: true
+garak_runner_custom_python_binary: /opt/python311/bin/python3.11
+garak_runner_system_python_binary: /usr/bin/python3
+```
+## Рекомендуемый режим
+
+Для Ubuntu 20.04, а также для унификации поведения между Ubuntu 20.04 / 22.04 / 24.04 рекомендуется использовать:
+```yaml
+garak_runner_use_custom_python: true
+```
+В этом режиме Garak создает virtual environment на базе отдельного Python 3.11 и не зависит от версии системного python3.
+
+## Проверка Python внутри Garak venv
+```bash
+/opt/llm/garak/venv/bin/python --version
+/opt/llm/garak/venv/bin/garak --help
+```
+
+---
 # Python 3.11 runtime
 
 Проект включает отдельную роль `python_runtime` для безопасной установки Python 3.11 на Ubuntu.
@@ -824,6 +852,25 @@ python3.11 --version
 ```bash
 ansible-playbook site.yml --tags langchain_runtime -K
 ```
+
+## Garak использует не тот Python
+
+Проверь:
+```bash
+/opt/llm/garak/venv/bin/python --version
+```
+Если внутри Garak virtual environment используется не Python 3.11.x, проверь переменные:
+```bash
+garak_runner_use_custom_python: true
+garak_runner_custom_python_binary: /opt/python311/bin/python3.11
+garak_runner_system_python_binary: /usr/bin/python3
+```
+Если venv Garak был создан раньше на другом Python, его может понадобиться пересоздать:
+```bash
+sudo rm -rf /opt/llm/garak/venv
+ansible-playbook site.yml --tags garak_runner -K
+```
+
 ## Не нужно менять системный `python3`
 
 Проект специально не меняет `/usr/bin/python3`.
