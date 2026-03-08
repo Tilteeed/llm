@@ -438,3 +438,59 @@ platform_users_shared_directory_mode: "2775"
 # Нужно ли разрешить sudo через membership в группе sudo.
 # На Ubuntu это стандартный сценарий.
 platform_users_manage_sudo_group: true
+
+# ------------------------------------------------------------
+# Блок роли: python_runtime
+# ------------------------------------------------------------
+
+# Отдельная версия Python для прикладных задач.
+# Системный python3 не меняем.
+python_runtime_version: "3.11"
+
+# Для Ubuntu 20.04 обычно нужен deadsnakes PPA.
+python_runtime_enable_deadsnakes_ppa: true
+
+# Ставить ли venv этой ролью.
+# По умолчанию выключено, потому что отдельный LangChain venv
+# создает следующая роль.
+python_runtime_create_venv: false
+
+# Если когда-то понадобится базовый venv именно этой ролью:
+python_runtime_venv_path: "/opt/venvs/python311"
+
+python_runtime_venv_owner: root
+python_runtime_venv_group: root
+
+python_runtime_upgrade_pip_stack: true
+# ------------------------------------------------------------
+# Блок роли: langchain_runtime
+# ------------------------------------------------------------
+
+# Версия Python, которой создается LangChain venv.
+langchain_runtime_python_version: "3.11"
+
+# Путь к venv с LangChain-стеком.
+langchain_runtime_venv_path: "/opt/venvs/langchain311"
+
+# Владелец venv.
+langchain_runtime_venv_owner: root
+langchain_runtime_venv_group: root
+
+# Обновлять ли pip stack внутри venv.
+langchain_runtime_upgrade_pip_stack: true
+
+# Основной LangChain-стек.
+langchain_runtime_packages:
+  - langchain
+  - langchain-community
+  - langgraph
+
+# Дополнительные пакеты, если понадобятся позже.
+# Примеры:
+# - langchain-openai
+# - chromadb
+# - faiss-cpu
+# - unstructured
+langchain_runtime_extra_packages: []
+
+langchain_runtime_install_packages: true

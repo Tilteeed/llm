@@ -48,6 +48,18 @@
         - garak_runner
         - garak
 
+    - role: python_runtime
+      tags:
+        - python_runtime
+        - python
+        - python311
+
+    - role: langchain_runtime
+      tags:
+        - langchain_runtime
+        - langchain
+        - python_packages
+
     - role: platform_users
       tags:
         - platform_users

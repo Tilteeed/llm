@@ -1,0 +1,171 @@
+---
+# ============================================================
+# tasks/main.yml
+# Роль: python_runtime
+#
+# Что делает роль:
+# 1. Проверяет, что хост действительно Ubuntu.
+# 2. При необходимости подключает deadsnakes PPA.
+# 3. Ставит Python 3.11 как отдельный runtime.
+# 4. НЕ меняет системный /usr/bin/python3.
+# 5. При необходимости создает отдельный virtual environment.
+#
+# ВАЖНО:
+# Эта роль специально не делает Python 3.11 системным python3.
+# Это нужно, чтобы не ломать apt, cloud image tooling и системные
+# утилиты Ubuntu.
+# ============================================================
+
+# ------------------------------------------------------------
+# Safety check: роль написана под Ubuntu.
+# ------------------------------------------------------------
+- name: Fail if target host is not Ubuntu
+  ansible.builtin.assert:
+    that:
+      - ansible_distribution == "Ubuntu"
+    fail_msg: >-
+      This role supports Ubuntu only.
+      Current distribution: {{ ansible_distribution }}
+    success_msg: >-
+      Ubuntu detected. Continuing with separate Python runtime installation.
+  tags:
+    - python_runtime
+    - validation
+
+# ------------------------------------------------------------
+# Ставим пакеты, нужные для подключения PPA.
+# ------------------------------------------------------------
+- name: Install prerequisite packages for Python runtime repository setup
+  ansible.builtin.apt:
+    name: "{{ python_runtime_prerequisite_packages }}"
+    state: present
+    update_cache: true
+  when: python_runtime_enable_deadsnakes_ppa | bool
+  tags:
+    - python_runtime
+    - packages
+    - repository
+
+# ------------------------------------------------------------
+# Подключаем deadsnakes PPA.
+# На Ubuntu 20.04 это обычный способ получить Python 3.11,
+# не трогая системный python3.
+# ------------------------------------------------------------
+- name: Add deadsnakes PPA for newer Python versions
+  ansible.builtin.apt_repository:
+    repo: ppa:deadsnakes/ppa
+    state: present
+    update_cache: true
+  when: python_runtime_enable_deadsnakes_ppa | bool
+  tags:
+    - python_runtime
+    - repository
+
+# ------------------------------------------------------------
+# Устанавливаем отдельный Python runtime.
+# ------------------------------------------------------------
+- name: Install separate Python runtime packages
+  ansible.builtin.apt:
+    name: "{{ python_runtime_packages }}"
+    state: present
+    update_cache: true
+  tags:
+    - python_runtime
+    - packages
+
+# ------------------------------------------------------------
+# Проверяем, что установленный python отвечает.
+# ------------------------------------------------------------
+- name: Validate installed Python runtime binary
+  ansible.builtin.command:
+    argv:
+      - "python{{ python_runtime_version }}"
+      - --version
+  register: python_runtime_version_check
+  changed_when: false
+  tags:
+    - python_runtime
+    - validation
+
+# ------------------------------------------------------------
+# Создаем родительский каталог для venv, если это включено.
+# ------------------------------------------------------------
+- name: Ensure parent directory for Python venv exists
+  ansible.builtin.file:
+    path: "{{ python_runtime_venv_path | dirname }}"
+    state: directory
+    owner: "{{ python_runtime_venv_owner }}"
+    group: "{{ python_runtime_venv_group }}"
+    mode: "0755"
+  when: python_runtime_create_venv | bool
+  tags:
+    - python_runtime
+    - venv
+
+# ------------------------------------------------------------
+# Создаем отдельный virtual environment.
+# Создается только если явно включено.
+# ------------------------------------------------------------
+- name: Create separate Python virtual environment
+  ansible.builtin.command:
+    argv:
+      - "python{{ python_runtime_version }}"
+      - -m
+      - venv
+      - "{{ python_runtime_venv_path }}"
+  args:
+    creates: "{{ python_runtime_venv_path }}/bin/activate"
+  when: python_runtime_create_venv | bool
+  tags:
+    - python_runtime
+    - venv
+
+# ------------------------------------------------------------
+# Приводим права venv в нужное состояние.
+# ------------------------------------------------------------
+- name: Ensure ownership of Python virtual environment
+  ansible.builtin.file:
+    path: "{{ python_runtime_venv_path }}"
+    state: directory
+    owner: "{{ python_runtime_venv_owner }}"
+    group: "{{ python_runtime_venv_group }}"
+    recurse: true
+  when: python_runtime_create_venv | bool
+  tags:
+    - python_runtime
+    - venv
+
+# ------------------------------------------------------------
+# Обновляем pip stack внутри venv.
+# ------------------------------------------------------------
+- name: Upgrade pip, setuptools and wheel inside venv
+  ansible.builtin.pip:
+    name:
+      - pip
+      - setuptools
+      - wheel
+    state: latest
+    virtualenv: "{{ python_runtime_venv_path }}"
+  when:
+    - python_runtime_create_venv | bool
+    - python_runtime_upgrade_pip_stack | bool
+  tags:
+    - python_runtime
+    - venv
+    - pip
+
+# ------------------------------------------------------------
+# Финальный человекочитаемый вывод.
+# ------------------------------------------------------------
+- name: Show final Python runtime installation output
+  ansible.builtin.debug:
+    msg:
+      - "Separate Python runtime installation completed successfully."
+      - "Installed version check output: {{ python_runtime_version_check.stdout }}"
+      - "Python binary: python{{ python_runtime_version }}"
+      - "System /usr/bin/python3 was not modified."
+      - "Virtual environment created by this role: {{ python_runtime_create_venv | bool }}"
+      - "Virtual environment path: {{ python_runtime_venv_path if (python_runtime_create_venv | bool) else 'not created by this role' }}"
+  tags:
+    - python_runtime
+    - validation

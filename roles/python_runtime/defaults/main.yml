@@ -1,0 +1,44 @@
+---
+# ============================================================
+# defaults/main.yml
+# Роль: python_runtime
+#
+# Значения по умолчанию для установки отдельного Python runtime
+# без изменения системного python3.
+# ============================================================
+
+# Целевая версия Python.
+# Для Ubuntu 20.04 безопасно и удобно использовать Python 3.11
+# как отдельный runtime для прикладных задач.
+python_runtime_version: "3.11"
+
+# Нужен ли deadsnakes PPA.
+# Для Ubuntu 20.04 это обычно требуется, потому что Python 3.11
+# не является стандартным системным Python этого релиза.
+python_runtime_enable_deadsnakes_ppa: true
+
+# Пакеты, которые нужны для подключения PPA.
+python_runtime_prerequisite_packages:
+  - software-properties-common
+  - ca-certificates
+
+# Основные пакеты Python runtime.
+python_runtime_packages:
+  - "python{{ python_runtime_version }}"
+  - "python{{ python_runtime_version }}-venv"
+  - "python{{ python_runtime_version }}-distutils"
+
+# Нужно ли создавать базовый venv этой ролью.
+# По умолчанию выключено, потому что отдельный venv для LangChain
+# будет создавать следующая роль langchain_runtime.
+python_runtime_create_venv: false
+
+# Путь к venv, если его нужно создать этой ролью.
+python_runtime_venv_path: "/opt/venvs/python{{ python_runtime_version | replace('.', '') }}"
+
+# Владелец и группа venv.
+python_runtime_venv_owner: root
+python_runtime_venv_group: root
+
+# Нужно ли обновлять pip/setuptools/wheel внутри venv.
+python_runtime_upgrade_pip_stack: true
