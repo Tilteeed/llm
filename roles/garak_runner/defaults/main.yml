@@ -12,6 +12,10 @@ garak_runner_bin_dir: "{{ garak_runner_base_dir }}/bin"
 garak_runner_owner: root
 garak_runner_group: root
 
+garak_runner_use_custom_python: true
+garak_runner_custom_python_binary: /opt/python311/bin/python3.11 #dlya starix OS
+garak_runner_system_python_binary: /usr/bin/python3 
+
 garak_runner_pip_package: garak
 garak_runner_package_spec: "{{ garak_runner_pip_package }}"
 garak_runner_upgrade_pip_stack: true

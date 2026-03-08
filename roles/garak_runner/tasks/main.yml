@@ -13,16 +13,32 @@
 # 7. Проверяет, что garak запускается и показывает help/version.
 # 8. Создает helper-скрипт для запуска Garak против Ollama.
 # ============================================================
-
+# ------------------------------------------------------------
+# Определяем, какой Python использовать для Garak.
+# Можно использовать либо отдельный Python 3.11 из роли
+# python_runtime, либо системный python3.
+# ------------------------------------------------------------
+- name: Define Python binary for Garak runtime
+  ansible.builtin.set_fact:
+    garak_runner_python_binary: >-
+      {{
+        garak_runner_custom_python_binary
+        if (garak_runner_use_custom_python | bool)
+        else garak_runner_system_python_binary
+      }}
+  tags:
+    - garak
+    - validation
+    - prereq
 # ------------------------------------------------------------
 # Проверяем наличие python3.
 # Предыдущая базовая роль должна была его установить,
 # но здесь мы явно убеждаемся, что он есть.
 # ------------------------------------------------------------
-- name: Validate python3 availability before Garak installation
+- name: Validate configured Python availability before Garak installation
   ansible.builtin.command:
     argv:
-      - python3
+      - "{{ garak_runner_python_binary }}"
       - --version
   register: garak_runner_python3_check
   changed_when: false
@@ -36,10 +52,10 @@
 # Он нужен, потому что Garak мы ставим не в system Python,
 # а в отдельное виртуальное окружение.
 # ------------------------------------------------------------
-- name: Validate python3 venv module availability
+- name: Validate configured Python venv module availability
   ansible.builtin.command:
     argv:
-      - python3
+      - "{{ garak_runner_python_binary }}"
       - -m
       - venv
       - --help
@@ -133,7 +149,7 @@
 - name: Create Garak virtual environment
   ansible.builtin.command:
     argv:
-      - python3
+      - "{{ garak_runner_python_binary }}"
       - -m
       - venv
       - "{{ garak_runner_venv_dir }}"
@@ -156,6 +172,7 @@
       - wheel
     state: latest
     virtualenv: "{{ garak_runner_venv_dir }}"
+    virtualenv_command: "{{ garak_runner_python_binary }} -m venv"
   when: garak_runner_upgrade_pip_stack | bool
   tags:
     - garak
@@ -172,6 +189,7 @@
     name: "{{ garak_runner_package_spec }}"
     state: present
     virtualenv: "{{ garak_runner_venv_dir }}"
+    virtualenv_command: "{{ garak_runner_python_binary }} -m venv"
   tags:
     - garak
     - packages

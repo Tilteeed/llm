@@ -341,6 +341,17 @@ garak_runner_bin_dir: "{{ garak_runner_base_dir }}/bin"
 garak_runner_owner: root
 garak_runner_group: root
 
+# Какой Python использовать для Garak.
+# true  -> использовать отдельный Python 3.11 из роли python_runtime
+# false -> использовать системный python3
+garak_runner_use_custom_python: true
+
+# Путь к отдельному Python 3.11
+garak_runner_custom_python_binary: /opt/python311/bin/python3.11
+
+# Путь к системному Python
+garak_runner_system_python_binary: /usr/bin/python3
+
 # Имя пакета для установки через pip.
 # Можно оставить просто garak.
 garak_runner_pip_package: garak
