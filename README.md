@@ -112,7 +112,7 @@ ansible-playbook site.yml --tags platform_users -K
 
 В group_vars/llm_nodes.yml обычно нужно указать:
 
-```
+```yaml
 ubuntu_nvidia_manage_host_driver: false
 ubuntu_nvidia_smi_command: nvidia-smi
 ```
@@ -121,7 +121,7 @@ ubuntu_nvidia_smi_command: nvidia-smi
 # Требования
 
 ## Хост
-- Ubuntu 24.04 LTS или совместимая Ubuntu-среда
+- Ubuntu 20.04 LTS, Ubuntu 24.04 LTS или совместимая Ubuntu-среда
 - Ansible target должен быть доступен по SSH или локально через `ansible_connection=local`
 - Для GPU-сценария:
   - обычная Ubuntu VM с NVIDIA GPU  
@@ -580,10 +580,12 @@ monitoring_stack_grafana_admin_password
 
 ## Что делает роль `python_runtime`
 
-- при необходимости подключает репозиторий для более новой версии Python;
-- устанавливает Python 3.11;
-- при необходимости может создать отдельный `venv`;
-- не делает Python 3.11 системным Python по умолчанию.
+- устанавливает зависимости, необходимые для сборки Python из исходников;
+- скачивает исходники Python 3.11.9;
+- собирает Python в отдельный prefix, например `/opt/python311`;
+- при необходимости создает отдельный `venv`;
+- не делает Python 3.11 системным Python по умолчанию;
+- не изменяет `/usr/bin/python3`.
 
 ## Запуск роли
 
@@ -592,34 +594,27 @@ ansible-playbook site.yml --tags python_runtime -K
 ```
 ## Проверка
 ```bash
+/opt/python311/bin/python3.11 --version
 python3.11 --version
 ```
 ### Ожидаемый результат — установленный Python 3.11.
 ---
 # LangChain runtime
 
-Проект включает отдельную роль langchain_runtime для создания isolated Python virtual environment и установки LangChain-стека.
+Проект включает отдельную роль `langchain_runtime` для создания isolated Python virtual environment и установки LangChain-стека.
 
 ## Что делает роль langchain_runtime
 
-создает отдельный venv;
-
-обновляет внутри него:
-
-- pip
-
-- setuptools
-
-- wheel
-
-устанавливает:
-
-- langchain
-
-- langchain-community
-
-- langgraph
-
+- создает отдельный `venv`;
+- обновляет внутри него:
+  - `pip`
+  - `setuptools`
+  - `wheel`
+- устанавливает:
+  - `langchain`
+  - `langchain-community`
+  - `langgraph`
+ 
 ## Почему это сделано отдельной ролью
 
 Это позволяет:
@@ -659,10 +654,12 @@ deactivate
 Дополнительные пакеты можно указать в group_vars/llm_nodes.yml.
 
 Пример:
+```yaml
 langchain_runtime_extra_packages:
   - langchain-openai
   - chromadb
   - faiss-cpu
+```
 
 ## После изменения переменных роль запускается повторно:
 
@@ -827,9 +824,11 @@ python3.11 --version
 ```bash
 ansible-playbook site.yml --tags langchain_runtime -K
 ```
-### Не нужно менять системный python3
-Проект специально не меняет /usr/bin/python3.
-Это сделано для безопасности и совместимости с Ubuntu, apt и cloud image tooling.
+## Не нужно менять системный `python3`
+
+Проект специально не меняет `/usr/bin/python3`.
+Это сделано для безопасности и совместимости с Ubuntu, `apt` и cloud image tooling.
+
 ---
 # Развитие проекта
 
