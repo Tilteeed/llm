@@ -443,21 +443,24 @@ platform_users_manage_sudo_group: true
 # Блок роли: python_runtime
 # ------------------------------------------------------------
 
-# Отдельная версия Python для прикладных задач.
-# Системный python3 не меняем.
-python_runtime_version: "3.11"
+# Полная версия Python, которую собираем из исходников.
+python_runtime_version: "3.11.9"
 
-# Для Ubuntu 20.04 обычно нужен deadsnakes PPA.
-python_runtime_enable_deadsnakes_ppa: true
+# Короткая версия Python.
+python_runtime_short_version: "3.11"
 
-# Ставить ли venv этой ролью.
-# По умолчанию выключено, потому что отдельный LangChain venv
-# создает следующая роль.
+# Каталог установки отдельного Python runtime.
+python_runtime_install_prefix: "/opt/python311"
+
+# Создавать ли symlink для удобного вызова.
+python_runtime_create_symlink: true
+python_runtime_symlink_path: "/usr/local/bin/python3.11"
+
+# Создавать ли базовый venv этой ролью.
+# По умолчанию нет, потому что LangChain venv создается отдельной ролью.
 python_runtime_create_venv: false
 
-# Если когда-то понадобится базовый venv именно этой ролью:
 python_runtime_venv_path: "/opt/venvs/python311"
-
 python_runtime_venv_owner: root
 python_runtime_venv_group: root
 

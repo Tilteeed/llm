@@ -20,7 +20,7 @@
 - name: Validate required Python runtime exists before LangChain setup
   ansible.builtin.command:
     argv:
-      - "python{{ langchain_runtime_python_version }}"
+      - "{{ langchain_runtime_python_binary }}"
       - --version
   register: langchain_runtime_python_check
   changed_when: false
@@ -49,7 +49,7 @@
 - name: Create LangChain virtual environment
   ansible.builtin.command:
     argv:
-      - "python{{ langchain_runtime_python_version }}"
+      - "{{ langchain_runtime_python_binary }}"
       - -m
       - venv
       - "{{ langchain_runtime_venv_path }}"
@@ -84,6 +84,7 @@
       - wheel
     state: latest
     virtualenv: "{{ langchain_runtime_venv_path }}"
+    virtualenv_command: "{{ langchain_runtime_python_binary }} -m venv"
   when: langchain_runtime_upgrade_pip_stack | bool
   tags:
     - langchain_runtime
@@ -98,6 +99,7 @@
     name: "{{ langchain_runtime_packages + langchain_runtime_extra_packages }}"
     state: present
     virtualenv: "{{ langchain_runtime_venv_path }}"
+    virtualenv_command: "{{ langchain_runtime_python_binary }} -m venv"
   when: langchain_runtime_install_packages | bool
   tags:
     - langchain_runtime
